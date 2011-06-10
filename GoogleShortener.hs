@@ -24,13 +24,34 @@ import Text.JSON
 import Text.JSON.Types 
 
 
+import System.Console.GetOpt 
+import System.Environment
+
+
+data OpCode = ToShortUrl String | ToLongUrl String | Version deriving (Show)
+
+options = [ Option ['v'] [] (NoArg Version) "Show the version",
+	    Option ['l'] [] (ReqArg ToLongUrl "[Short Url]") "convert to long url",
+	    Option ['s'] [] (ReqArg ToShortUrl "[long url]") "convert to short url"]
+
+parseArgs :: [String] -> [OpCode]
+parseArgs args = case getOpt Permute options args of 
+		(parsedargs , [], []) -> if null parsedargs then error ("wrong args" ++ usageInfo "usage: " options) else parsedargs
+		(_, _, e) -> error ( concat e ++  usageInfo "usage: " options)
+
 
 main :: IO ()
-main = do print 10
-
+main = do 
+	args <- fmap parseArgs getArgs
+	case head args of 
+		Version -> putStrLn "version 0.0.0"
+		ToShortUrl url -> do rsp <- shortener url
+		                     putStrLn $ shortUrl rsp 
+		ToLongUrl url -> do rsp <- expander url
+		                    putStrLn $ longUrl rsp
+	
 
 data GoogleShortenerRsp = GoogleShortenerRsp {kind :: String, shortUrl :: String, longUrl :: String}  deriving (Show)
-
 
 instance JSON GoogleShortenerRsp where
     readJSON (JSObject o) = Ok GoogleShortenerRsp {
